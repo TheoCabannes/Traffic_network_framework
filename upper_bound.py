@@ -23,14 +23,14 @@ u = np.zeros((l,1)) #link capacities
 d = np.zeros((l,r))
 delta = np.zeros((l,r))
 od2route = np.zeros((K,max_r))
-
+f_feas = f #vector of feasible flows satisfying capacity constraints
 flag = [f>u]
 for k in range(K):
     print('OD pair: %d'%k)
     r_k = (od2route[k,:]).astype(int) #vector of indices of all routes bw od pair k
     not_done = 1
     while not_done:
-        flag = [f>u] 
+        flag = [f_feas>u] 
         sat_f = np.nonzero(flag)[1] #indices of saturated flows
         d = (delta>0) #binary link route incidence matrix
         #update the flag matrix of saturated flows
@@ -51,11 +51,11 @@ for k in range(K):
                 for r in sat: #route has saturated link/s
                     pos_sat_f = np.where(d[:,r]==2)[0] #position of saturated link/s
                     t = np.where(d[:,us]==1)[0] #position of unsaturated links in unsaturated route
-                    f[pos_sat_f] = u[pos_sat_f]
+                    f_feas[pos_sat_f] = u[pos_sat_f]
                     for p in pos_sat_f:
                         i = 0
                         t = t[i]
-                        f[t] = f[t]+f[p]-u[p]
+                        f_feas[t] = f_feas[t]+f_feas[p]-u[p]
                         i = i+1
                 
     
