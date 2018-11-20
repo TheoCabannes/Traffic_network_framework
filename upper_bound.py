@@ -18,19 +18,20 @@ K = 15 #number of od pairs in network
 r = 20 #number of routes in network
 max_r = 5 #maximum number of routes for any od pair
 l_nb = np.zeros((l,1)) #link number for each link in nw
-f = np.zeros((l,1)) #Given flows
+f = np.ones((l,1)) #Given flows
 u = np.zeros((l,1)) #link capacities
-d = np.zeros((l,r)) 
+d = np.zeros((l,r))
 delta = np.zeros((l,r))
 od2route = np.zeros((K,max_r))
 
 flag = [f>u]
 for k in range(K):
-    r_k = od2route[k,:] #vector of indices of all routes bw od pair k
+    print('OD pair: %d'%k)
+    r_k = (od2route[k,:]).astype(int) #vector of indices of all routes bw od pair k
     not_done = 1
     while not_done:
         flag = [f>u] 
-        sat_f = np.nonzero(flag) #indices of saturated flows
+        sat_f = np.nonzero(flag)[1] #indices of saturated flows
         d = (delta>0) #binary link route incidence matrix
         #update the flag matrix of saturated flows
         for r in r_k:
@@ -40,17 +41,21 @@ for k in range(K):
                     #0: link not in route, 1: unsaturated link, 2: saturated link
         sat = np.where(np.amax(d[:,r_k],axis=0)==2)[0] #saturated routes
         unsat = np.where(np.amax(d[:,r_k],axis=0)==1)[0] #unsaturated routes
-        if np.size(sat)==0:
-            not_done = 0 #if no unstaurated route is present for a given od pair
-        us = unsat[0] #unsaturated route to which flow is to be moved
-        for r in sat: #route has saturated link/s
-            pos_sat_f = np.where(d[:,r]==2)[0] #position of saturated link/s
-            t = np.where(d[:,us]==1)[0] #position of unsaturated links in unsaturated route
-            f[pos_sat_f] = u[pos_sat_f]
-            for p in pos_sat_f:
-                i = 0
-                t = t[i]
-                f[t] = f[t]+f[p]-u[p]
-                i = i+1
+        if np.size(sat)==0:#if no saturated route is present for a given od pair
+            not_done = 0 
+        else:#presence of at least one saturated route
+            if np.size(unsat)==0:#if no unsaturated route is present for a given od pair
+                print('Cannot find feasible solution for OD pair %d'%k)
+            else:
+                us = unsat[0] #unsaturated route to which flow is to be moved
+                for r in sat: #route has saturated link/s
+                    pos_sat_f = np.where(d[:,r]==2)[0] #position of saturated link/s
+                    t = np.where(d[:,us]==1)[0] #position of unsaturated links in unsaturated route
+                    f[pos_sat_f] = u[pos_sat_f]
+                    for p in pos_sat_f:
+                        i = 0
+                        t = t[i]
+                        f[t] = f[t]+f[p]-u[p]
+                        i = i+1
                 
     
