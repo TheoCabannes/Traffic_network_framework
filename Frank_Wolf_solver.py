@@ -14,19 +14,15 @@
 # 
 # Finally, we solve the STA using links flow and we compute the paths during the all or nothing step of the Frank Wolf algorithm.
 
-I210 = 'data/I210'
-Chic = 'data/Chicago'
-Anah = 'data/Anaheim'
-Siou = 'data/SiouxFalls'
-Brae = 'data/braess'
+debug = False
 
-network_name = Siou
-debug = True
-
-
-# First we load the network
-graph, demand = load_network(network_name)
-
+if debug:
+    I210 = 'data/I210'
+    Chic = 'data/Chicago'
+    Anah = 'data/Anaheim'
+    Siou = 'data/SiouxFalls'
+    Brae = 'data/braess'
+    network_name = Siou
 
 # ## 1. We load the graph and the demand
 # Both graph and demand are in csv file, we load them
@@ -400,17 +396,14 @@ def build_network(graph, c):
     return nb_links, nb_nodes, G, graph_dict
     
 def initialization_FW(demand, G, graph_dict, all_paths_used, k, graph, nb_nodes, c):
-    debug_local = True
-    print(G)
     f, paths_used_for_this_iter, all_paths_used, k = all_or_nothing(demand, G, graph_dict, all_paths_used, k)
-    
-    print(f)
     G = update_travel_time_from_flow(graph, f, nb_nodes, c)
     path_flow_matrix = np.zeros(k)
     for val in paths_used_for_this_iter.values():
         path_flow_matrix[val[1]] = val[0].get_flow()
 
-    if debug_local:
+    if debug:
+        print(G)
         print("Test of initialization_FW")
         print(f)
         for p in paths_used_for_this_iter.values():
@@ -497,24 +490,6 @@ def Frank_Wolf_solver(graph, demand, eps, nb_iter, c=-1):
     tt_f, delta, route2od = output_FW(all_paths_used, nb_links, graph, f, demand)
     return path_flow_matrix, tt_f, delta, route2od
 
-eps=1e-8
-nb_iter = 1000
-graph, demand = load_network(network_name)
-if network_name == Brae:
-    demand[0][2] = 10
-        
-path_flow_matrix, tt_f, delta, route2od = Frank_Wolf_solver(graph, demand, eps, nb_iter) #, [11,11,2,11,11])
-
-if debug:
-    nb_paths = len(path_flow_matrix)
-    print(nb_paths)
-    print(tt_f)
-    print(delta)
-    print(delta @ tt_f)
-    print(route2od)
-    print(delta.shape)
-
-
 def check_wardrop(j, demand, route2od, delta, path_flow_matrix, tt_f):
     f = delta.T @ path_flow_matrix
     tt_p = delta @ tt_f
@@ -526,5 +501,31 @@ def check_wardrop(j, demand, route2od, delta, path_flow_matrix, tt_f):
     print(od)
     print(tab)
     print(tt_p[tab])
-# check_wardrop(231, demand, route2od, delta, path_flow_matrix, tt_f)
+
+def test(network_name):
+
+    eps=1e-8
+    nb_iter = 1000
+    graph, demand = load_network(network_name)
+    if network_name == Brae:
+        demand[0][2] = 10
+        
+    path_flow_matrix, tt_f, delta, route2od = Frank_Wolf_solver(graph, demand, eps, nb_iter) #, [11,11,2,11,11])
+
+    if debug:
+        nb_paths = len(path_flow_matrix)
+        print(nb_paths)
+        print(tt_f)
+        print(delta)
+        print(delta @ tt_f)
+        print(route2od)
+        print(delta.shape)
+    check_wardrop(231, demand, route2od, delta, path_flow_matrix, tt_f)
+
+# I210 = 'data/I210'
+# Chic = 'data/Chicago'
+# Anah = 'data/Anaheim'
+# Siou = 'data/SiouxFalls'
+# Brae = 'data/braess'
+# test(Brae)
 
