@@ -423,7 +423,7 @@ def potential(graph, f, c=-1):
     return np.sum(pot_tmp)
 
 
-def line_search(f, res=20):
+def line_search(f, res=40):
     debug_local = False
     # on a grid of 2^res points bw 0 and 1, find global minimum
     # of continuous convex function

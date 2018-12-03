@@ -32,7 +32,7 @@ def lower_bound(f, h, t, Delta, route2od, u_old, u_new, nk):
     constr = constr_1 + constr_2 + constr_3 + constr_4
     
     problem = cvx.Problem(obj, constr)
-    bound = problem.solve(solver=cvx.CPLEX, verbose=True, feastol=tolerance, reltol=tolerance, abstol=tolerance)
+    bound = problem.solve(solver=cvx.ECOS, verbose=False, feastol=tolerance, reltol=tolerance, abstol=tolerance)
     
     return bound, lambda_link.value, pi.value
 
