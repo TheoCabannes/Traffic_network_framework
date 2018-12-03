@@ -468,7 +468,7 @@ def build_network(graph, c):
     return nb_links, nb_nodes, G, graph_dict
     
 def initialization_FW(demand, G, graph_dict, all_paths_used, k, graph, nb_nodes, c):
-    debug_local = True
+    debug_local = False
     
     f, paths_used_for_this_iter, all_paths_used, k = all_or_nothing(demand, G, graph_dict, all_paths_used, k)
     if debug_local:
@@ -488,31 +488,8 @@ def initialization_FW(demand, G, graph_dict, all_paths_used, k, graph, nb_nodes,
     return f, paths_used_for_this_iter, all_paths_used, k, G, path_flow_matrix
 
 def iteration_FW(demand, G, graph_dict, all_paths_used, k, graph, f, nb_nodes, c, path_flow_matrix, i):
-    demand_tmp = demand.copy()
-    
-    nb_links = int(np.max(graph[:,0])+1)
-    _, delta, route2od = output_FW(all_paths_used, nb_links, graph, f, demand)
-    path_at_capacity = set()
-    for j in range(len(f)):
-        if f[j] > c[j] - float_appro and f[j]<c[j]:
-            tab = np.argwhere(delta.toarray()[:,j]==1)[:,0]
-            for path_c in tab: path_at_capacity.add(path_c)
-    # Path at capacity are all the path that saturate links
-
-    # We don't care about the flow at the capacity
-    for path_c in path_at_capacity:
-        # find the row of the demand
-        demand_tmp[route2od[path_c]][2] += -path_flow_matrix[path_c]
-
     # WE COMPUTE THE ALL OR NOTHING ALGORITHM
-    faon, paths_used_for_this_iter, all_paths_used, k = all_or_nothing(demand_tmp, G, graph_dict, all_paths_used, k)
-
-    
-    # I add the flow of the saturated path to faon 
-    for path_c in path_at_capacity:
-        for j in np.where(delta[path_c].toarray()[0]==1):
-            for jj in j:
-                faon[jj] += path_flow_matrix[path_c]
+    faon, paths_used_for_this_iter, all_paths_used, k = all_or_nothing(demand, G, graph_dict, all_paths_used, k)
     
     # we find the better convex combinaison of f and faon
     s = line_search(lambda a: potential(graph, (1. - a) * f + a * faon, c))
@@ -521,14 +498,45 @@ def iteration_FW(demand, G, graph_dict, all_paths_used, k, graph, f, nb_nodes, c
     # WE SHOULD REMOVE THE PATH THAT SATURATED THE LINKS
     # AND THEN COMPUTE THE SOLUTION WITHOUT THE SATURATION, AND WITHOUT THE 
     # CORRESPONDING DEMAND
-    
+    bool_cap = (type(c) != int)
+    if s==0 and bool_cap:
+        update_flow = True
+        
+        demand_tmp = demand.copy()
+        nb_links = int(np.max(graph[:,0])+1)
+        _, delta, route2od = output_FW(all_paths_used, nb_links, graph, f, demand)
+        path_at_capacity = set()
+        for j in range(len(f)):
+            if f[j] > c[j] - float_appro and f[j]<c[j]:
+                tab = np.argwhere(delta.toarray()[:,j]==1)[:,0]
+                for path_c in tab: path_at_capacity.add(path_c)
+        # Path at capacity are all the path that saturate links
+
+        # We don't care about the flow at the capacity
+        for path_c in path_at_capacity:
+            # find the row of the demand
+            demand_tmp[route2od[path_c]][2] += -path_flow_matrix[path_c]
+
+        # WE COMPUTE THE ALL OR NOTHING ALGORITHM
+        faon, paths_used_for_this_iter, all_paths_used, k = all_or_nothing(demand_tmp, G, graph_dict, all_paths_used, k)
+
+        # I add the flow of the saturated path to faon 
+        for path_c in path_at_capacity:
+            for j in np.where(delta[path_c].toarray()[0]==1):
+                for jj in j:
+                    faon[jj] += path_flow_matrix[path_c]
+
+        # we find the better convex combinaison of f and faon
+        s = line_search(lambda a: potential(graph, (1. - a) * f + a * faon, c))
+        for path_c in path_at_capacity:
+            path_flow_matrix[path_c] = path_flow_matrix[path_c] /(1-s) 
+    else:
+        update_flow = False
     f = (1. - s) * f + s * faon
     G = update_travel_time_from_flow(graph, f, nb_nodes, c)
 
     # we multiply the previous path flow matrix by the coeficient of the line search
     path_flow_matrix = (1-s) * path_flow_matrix
-    for path_c in path_at_capacity:
-        path_flow_matrix[path_c] = path_flow_matrix[path_c] /(1-s) 
     # we add the new path at the end of the path flow matrix.
     path_flow_matrix = np.append(path_flow_matrix, np.zeros(len(all_paths_used)-path_flow_matrix.shape[0]))
     # we add the all or nothing path flow (mulitply by the coeficient of the line search) to the path flow matrix.
@@ -575,10 +583,8 @@ def output_FW(all_paths_used, nb_links, graph, f, demand):
 def Frank_Wolf_solver(graph, demand_bis, eps, nb_iter, c=-1):
     ######### FIRST, WE INITIALIZE THE ALGORITHM #########
     # We initialize the number of paths_used to 0, 
-    try:
+    if type(c)!=int:
         c = np.array(c)
-    except:
-        ("")
     k = 0
     all_paths_used = {}
     
@@ -626,7 +632,7 @@ def od2route(route2od):
     return od2route
 
 
-# In[13]:
+# In[14]:
 
 
 def test_code():
@@ -643,11 +649,12 @@ def test_code():
     if network_name == Brae:
         demand[0][2] = 10
 
-    path_flow_matrix, tt_f, delta, route2od = Frank_Wolf_solver(graph, demand, eps, nb_iter, [11,11,2,11,11])
+    path_flow_matrix, tt_f, delta, route2od = Frank_Wolf_solver(graph, demand, eps, nb_iter, [11,11,6,11,11])
 
     debug = True
     if debug:
         nb_paths = len(path_flow_matrix)
+        print(path_flow_matrix)
         print(nb_paths)
         print(tt_f)
         print(delta)
