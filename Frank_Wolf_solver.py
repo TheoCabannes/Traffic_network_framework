@@ -1,6 +1,34 @@
 
 # coding: utf-8
 
+# # This is the code which solves the Static Traffic Assignment Problem
+
+# We want to solve the following problem (TAP-C):
+# \begin{align}
+# \min_{f, h} &\sum_{a} \int_{0}^{f_a} c_a(s)\; \text{d}s
+# \\
+# \text{s.t.  } & \;\; f = \Delta h
+# \\
+# & \;\; 
+# h \geq 0
+# \\
+# & \;\; 
+# A h = d
+# \\
+# & \;\; 
+# f \leq u
+# \end{align}
+# 
+# This problem is hard to compute, even if it is a convex problem. Computing all the path of a network is NP-hard (with respect to the number of edges and links).
+# 
+# Nevertheless, the TAP can be solve using a Frank-Wolf algorithm:
+# \begin{align}
+# &\text{1. TO DO }
+# \\
+# &\text{2. }
+# \end{align}
+# 
+
 # #### Remarks
 # First, we tried to solve the STA with CVX.
 # This does not work because the values of the travel time are to big. 
@@ -13,25 +41,29 @@
 # But if we can compute every path (we only need to do it one time), then it is really fast to compute the shortest path. We do not need to do a Dikjstra's algorithm to compute the shortest path, only a big matrix multiplication and a array sorting are enough. This might be more difficult on a laptop. But it might be faster on a HPC.
 # 
 # Finally, we solve the STA using links flow and we compute the paths during the all or nothing step of the Frank Wolf algorithm.
+# 
+# TO DO: SOME CHANGE NEED TO BE DONE TO THE CAPACITY CONSTRAINTS. THE GRADIENT OF THE OBJECTIVE FUNCTION IS NOT FEASIBLE.
+
+# In[1]:
+
 
 debug = False
 
-if debug:
-    I210 = 'data/I210'
-    Chic = 'data/Chicago'
-    Anah = 'data/Anaheim'
-    Siou = 'data/SiouxFalls'
-    Brae = 'data/braess'
-    network_name = Siou
 
 # ## 1. We load the graph and the demand
 # Both graph and demand are in csv file, we load them
+
+# In[2]:
+
 
 import numpy as np
 import scipy.sparse
 
 
 # ### We clean the data
+
+# In[3]:
+
 
 """
 We need to demand to be an array like:
@@ -99,6 +131,8 @@ if debug_local:
 
 # Then, we define the function which gives the travel time as a function of the flow
 
+# In[4]:
+
 
 ## Here Max float is fixed to not overlap the maximum float number when we compute the potential function
 max_float = 1e+10
@@ -116,8 +150,11 @@ The travel time of the link is t = a0 + a1 * f + a2 * f**2 + a3 * f**3 + a4 * f*
     It is t = + inf (max_float) is f >= c
 """
 def travel_time(graph, f, c = -1):
-    if c == -1:
-        c = [max_float for i in range(len(f))]
+    try:
+        if c == -1:
+            c = [max_float for i in range(len(f))]
+    except:
+        ("")
     # here we need to have the same indexation for graph and f. That why we need to store graph in a dictionnary
     tt_tmp = graph[:,3] + graph[:,4]*f + graph[:,5]*(f**2) + graph[:,6]*(f**3) + graph[:,7]*(f**4)
     if len(c) != len(f):
@@ -129,6 +166,8 @@ def travel_time(graph, f, c = -1):
 # ## 2. We compute the all or nothing flow allocation
 
 # To use the Dijkstra's algorithm class of scipy we need to define the adjacent matrix of the graph
+
+# In[5]:
 
 
 """
@@ -158,7 +197,14 @@ if debug_local:
     G = update_travel_time_from_flow(graph, np.zeros(nb_links), nb_nodes) # , [1,1,-1,1,1]))
     print(G)
 
+
+# In[6]:
+
+
 from scipy.sparse.csgraph import dijkstra
+
+
+# In[7]:
 
 
 """
@@ -217,6 +263,9 @@ if debug_local:
 
 # Now let's compute the all or nothing allocation
 
+# In[8]:
+
+
 """
 This cell is the main point of the entire solver.
 It is the all or nothing allocation.
@@ -234,6 +283,17 @@ def build_graph_adjacency(graph):
             graph_dict[int(graph[i][1])] = {}
         graph_dict[int(graph[i][1])][int(graph[i][2])] = int(graph[i][0])
     return graph_dict
+
+# graph_dict gives the line of the graph matrix corresponding to the destination d and the origin o
+def build_demand_dict(demand):
+    demand_dict = {}
+    for i in range(demand.shape[0]):
+        try: 
+            demand_dict[int(demand[i][0])]
+        except:
+            demand_dict[int(demand[i][0])] = {}
+        demand_dict[int(demand[i][0])][int(demand[i][1])] = i
+    return demand_dict
 
 def put_flow_on_short_path(faon, o_tmp, d_tmp, flow_tmp, return_predecessors, graph_dict, paths_used, paths_used_tmp, k, i, full_dijkstra):
     node_tmp = d_tmp
@@ -314,6 +374,9 @@ def all_or_nothing(demand, G, graph_dict, paths_used, k, full_dijkstra = True):
 
 # We define the line search
 
+# In[9]:
+
+
 debug_local = False
 if debug_local:
     # we load the network
@@ -334,6 +397,9 @@ if debug_local:
         print(p[0])
 
 
+# In[10]:
+
+
 """
 The function potential is used to compute the line search between 
 the all or nothing allocation and the current flow allocation
@@ -346,8 +412,11 @@ The function line search does a 1D line search.
 def potential(graph, f, c=-1):
     # this routine is useful for doing a line search
     # computes the potential at flow assignment f
-    if c == -1:
-        c = [max_float for i in range(len(f))] # this might be to much, to do once we have everything done
+    try:
+        if c == -1:
+            c = [max_float for i in range(len(f))] # this might be to much, to do once we have everything done
+    except:
+        ("")
     # here we need to have the same indexation for graph and f.
     pot_tmp = graph[:,3]*f + 1/2*graph[:,4]*(f**2) + 1/3*graph[:,5]*(f**3) + 1/4*graph[:,6]*(f**4) + 1/5*graph[:,7]*(f**5)
     pot_tmp = [pot_tmp[i] if f[i]<c[i] else f[i]*max_float for i in range(len(f))]
@@ -387,6 +456,9 @@ def line_search(f, res=20):
 
 # Now let run the Frank-Wolf's algorithm with a line search to find alpha
 
+# In[11]:
+
+
 def build_network(graph, c):
     nb_links = int(np.max(graph[:,0])+1)
     path.set_nb_links(nb_links)
@@ -396,14 +468,18 @@ def build_network(graph, c):
     return nb_links, nb_nodes, G, graph_dict
     
 def initialization_FW(demand, G, graph_dict, all_paths_used, k, graph, nb_nodes, c):
+    debug_local = False
+    
     f, paths_used_for_this_iter, all_paths_used, k = all_or_nothing(demand, G, graph_dict, all_paths_used, k)
+    if debug_local:
+        print(G)
+        print(f)
     G = update_travel_time_from_flow(graph, f, nb_nodes, c)
     path_flow_matrix = np.zeros(k)
     for val in paths_used_for_this_iter.values():
         path_flow_matrix[val[1]] = val[0].get_flow()
 
-    if debug:
-        print(G)
+    if debug_local:
         print("Test of initialization_FW")
         print(f)
         for p in paths_used_for_this_iter.values():
@@ -414,15 +490,48 @@ def initialization_FW(demand, G, graph_dict, all_paths_used, k, graph, nb_nodes,
 def iteration_FW(demand, G, graph_dict, all_paths_used, k, graph, f, nb_nodes, c, path_flow_matrix, i):
     # WE COMPUTE THE ALL OR NOTHING ALGORITHM
     faon, paths_used_for_this_iter, all_paths_used, k = all_or_nothing(demand, G, graph_dict, all_paths_used, k)
-
+    
     # we find the better convex combinaison of f and faon
     s = line_search(lambda a: potential(graph, (1. - a) * f + a * faon, c))
-    # TO DO
     # HERE WE SHOULD BE CAREFUL IN THE CASE WHERE WE HAVE THE CAPACITY CONSTRAINTS
     # THE GRADIENT OF THE FUNCTION IS NOT THE SHORTEST PATH
     # WE SHOULD REMOVE THE PATH THAT SATURATED THE LINKS
     # AND THEN COMPUTE THE SOLUTION WITHOUT THE SATURATION, AND WITHOUT THE 
     # CORRESPONDING DEMAND
+    bool_cap = (type(c) != int)
+    if s==0 and bool_cap:
+        update_flow = True
+        
+        demand_tmp = demand.copy()
+        nb_links = int(np.max(graph[:,0])+1)
+        _, delta, route2od = output_FW(all_paths_used, nb_links, graph, f, demand)
+        path_at_capacity = set()
+        for j in range(len(f)):
+            if f[j] > c[j] - float_appro and f[j]<c[j]:
+                tab = np.argwhere(delta.toarray()[:,j]==1)[:,0]
+                for path_c in tab: path_at_capacity.add(path_c)
+        # Path at capacity are all the path that saturate links
+
+        # We don't care about the flow at the capacity
+        for path_c in path_at_capacity:
+            # find the row of the demand
+            demand_tmp[route2od[path_c]][2] += -path_flow_matrix[path_c]
+
+        # WE COMPUTE THE ALL OR NOTHING ALGORITHM
+        faon, paths_used_for_this_iter, all_paths_used, k = all_or_nothing(demand_tmp, G, graph_dict, all_paths_used, k)
+
+        # I add the flow of the saturated path to faon 
+        for path_c in path_at_capacity:
+            for j in np.where(delta[path_c].toarray()[0]==1):
+                for jj in j:
+                    faon[jj] += path_flow_matrix[path_c]
+
+        # we find the better convex combinaison of f and faon
+        s = line_search(lambda a: potential(graph, (1. - a) * f + a * faon, c))
+        for path_c in path_at_capacity:
+            path_flow_matrix[path_c] = path_flow_matrix[path_c] /(1-s) 
+    else:
+        update_flow = False
     f = (1. - s) * f + s * faon
     G = update_travel_time_from_flow(graph, f, nb_nodes, c)
 
@@ -437,7 +546,10 @@ def iteration_FW(demand, G, graph_dict, all_paths_used, k, graph, f, nb_nodes, c
 
     if debug and i % (nb_iter / 10) == 0:
         print("Iteration: " + str(i))
+        print("demand = " + str(demand_tmp))
         print("s: " + str(s))
+        print("h: " +str(path_flow_matrix))
+        print("f: " + str(f))
         print("The paths used at this iteration are:")
         for p in paths_used_for_this_iter.values():
             print(p[0])
@@ -451,6 +563,8 @@ def output_FW(all_paths_used, nb_links, graph, f, demand):
     route2od = [0 for _ in range(nb_paths)]# np.zeros(shape=nb_paths)
     delta = scipy.sparse.lil_matrix(delta)
     tt_f = np.array(travel_time(graph, f))
+    
+    demand_dict = build_demand_dict(demand)
 
     for p in all_paths_used.values():
         # here I can built route2od matrix at the same time
@@ -458,7 +572,7 @@ def output_FW(all_paths_used, nb_links, graph, f, demand):
             links_tmp = p[0].links
             for l in links_tmp:
                 delta[p[1],l] = 1
-            route2od[p[1]] = (int(graph[int(links_tmp[0])][1]), int(graph[int(links_tmp[-1])][2]))
+            route2od[p[1]] = demand_dict[int(graph[int(links_tmp[0])][1])][int(graph[int(links_tmp[-1])][2])]
         except:
             ("")
     delta = delta.tocsr()
@@ -466,9 +580,11 @@ def output_FW(all_paths_used, nb_links, graph, f, demand):
     # route2od should be build from the all_paths_used_dict
     return tt_f, delta, route2od
 
-def Frank_Wolf_solver(graph, demand, eps, nb_iter, c=-1):
+def Frank_Wolf_solver(graph, demand_bis, eps, nb_iter, c=-1):
     ######### FIRST, WE INITIALIZE THE ALGORITHM #########
     # We initialize the number of paths_used to 0, 
+    if type(c)!=int:
+        c = np.array(c)
     k = 0
     all_paths_used = {}
     
@@ -476,24 +592,28 @@ def Frank_Wolf_solver(graph, demand, eps, nb_iter, c=-1):
     nb_links, nb_nodes, G, graph_dict = build_network(graph, c)
     
     # The initialization step: we put all the demand on the fastest free flow travel time paths.
-    f, paths_used_for_this_iter, all_paths_used, k, G, path_flow_matrix = initialization_FW(demand, G, graph_dict, all_paths_used, k, graph, nb_nodes, c)
+    f, paths_used_for_this_iter, all_paths_used, k, G, path_flow_matrix = initialization_FW(demand_bis, G, graph_dict, all_paths_used, k, graph, nb_nodes, c)
 
     ######### THEN, I RUN THE ITERATION OF THE FRANK-WOLF ALGORITHM #########
     for i in range(nb_iter):
-        path_flow_matrix, f, G, all_paths_used, k, s = iteration_FW(demand, G, graph_dict, all_paths_used, k, graph, f, nb_nodes, c, path_flow_matrix, i)
+        path_flow_matrix, f, G, all_paths_used, k, s = iteration_FW(demand_bis, G, graph_dict, all_paths_used, k, graph, f, nb_nodes, c, path_flow_matrix, i)
         if s < eps:
             break
     if debug:
         print(path_flow_matrix)
        
     ######### FINALLY, I WORK ON THE OUTPUT TO RETURN #########
-    tt_f, delta, route2od = output_FW(all_paths_used, nb_links, graph, f, demand)
-    return path_flow_matrix, tt_f, delta, route2od
+    tt_f, delta, route2od = output_FW(all_paths_used, nb_links, graph, f, demand_bis)
+    return path_flow_matrix, tt_f, delta.toarray(), route2od
+
+
+# In[12]:
+
 
 def check_wardrop(j, demand, route2od, delta, path_flow_matrix, tt_f):
     f = delta.T @ path_flow_matrix
     tt_p = delta @ tt_f
-    od = (int(demand[j][0]), int(demand[j][1]))
+    od = j
     tab = []
     for i in range(len(route2od)):
         if route2od[i] == od:
@@ -502,30 +622,49 @@ def check_wardrop(j, demand, route2od, delta, path_flow_matrix, tt_f):
     print(tab)
     print(tt_p[tab])
 
-def test(network_name):
+def od2route(route2od):
+    od2route = {}
+    for i in range(len(route2od)):
+        if route2od[i] not in od2route.keys():
+            od2route[route2od[i]] = set()
+        od2route[route2od[i]].add(i)
+    print(route2od)
+    return od2route
 
+
+# In[14]:
+
+
+def test_code():
+    I210 = 'data/I210'
+    Chic = 'data/Chicago'
+    Anah = 'data/Anaheim'
+    Siou = 'data/SiouxFalls'
+    Brae = 'data/braess'
+
+    network_name = Brae
     eps=1e-8
     nb_iter = 1000
     graph, demand = load_network(network_name)
     if network_name == Brae:
         demand[0][2] = 10
-        
-    path_flow_matrix, tt_f, delta, route2od = Frank_Wolf_solver(graph, demand, eps, nb_iter) #, [11,11,2,11,11])
 
+    path_flow_matrix, tt_f, delta, route2od = Frank_Wolf_solver(graph, demand, eps, nb_iter, [11,11,6,11,11])
+
+    debug = True
     if debug:
         nb_paths = len(path_flow_matrix)
+        print(path_flow_matrix)
         print(nb_paths)
         print(tt_f)
         print(delta)
         print(delta @ tt_f)
         print(route2od)
         print(delta.shape)
-    check_wardrop(231, demand, route2od, delta, path_flow_matrix, tt_f)
+        print(od2route(route2od))
+        for od in od2route(route2od).keys():
+            print("check wardrop for the od: " + str(od))
+            check_wardrop(od, demand, route2od, delta, path_flow_matrix, tt_f)
 
-# I210 = 'data/I210'
-# Chic = 'data/Chicago'
-# Anah = 'data/Anaheim'
-# Siou = 'data/SiouxFalls'
-# Brae = 'data/braess'
-# test(Brae)
+# test_code()
 
