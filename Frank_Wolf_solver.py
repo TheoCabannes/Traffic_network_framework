@@ -423,7 +423,7 @@ def potential(graph, f, c=-1):
     return np.sum(pot_tmp)
 
 
-def line_search(f, res=40):
+def line_search(f, res=30):
     debug_local = False
     # on a grid of 2^res points bw 0 and 1, find global minimum
     # of continuous convex function
@@ -528,6 +528,8 @@ def iteration_FW(demand, G, graph_dict, all_paths_used, k, graph, f, nb_nodes, c
 
         # we find the better convex combinaison of f and faon
         s = line_search(lambda a: potential(graph, (1. - a) * f + a * faon, c))
+        if s >= 0.9:
+            s = 0.9
         for path_c in path_at_capacity:
             path_flow_matrix[path_c] = path_flow_matrix[path_c] /(1-s) 
     else:
