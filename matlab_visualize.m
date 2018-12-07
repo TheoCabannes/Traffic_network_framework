@@ -34,6 +34,7 @@ for i=1:size(f,2)
     thisf = f(:,i);
     fwidths = max(0.01,10*thisf/fmax);
     h = figure;
+    colorbar('jet')
     plot(G{i},'Xdata',xdata,'Ydata',ydata,'EdgeColor', fcolors(startind:startind+nedges-1,:), 'EdgeLabel',round(thisf),'LineWidth',fwidths,'EdgeFontsize',10)
     startind = startind+nedges;
     xlabel('X Location','Fontsize',14);
