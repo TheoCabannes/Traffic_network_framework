@@ -72,11 +72,11 @@ travel_time_function init_travel_time_function(string network) {
             index_power = j;
         }
 
-        if (legend_name.find("B") != string::npos) {
+        if (legend_name.find("Free Flow Time") != string::npos) {
             index_fft = j;
         }
 
-        if (legend_name.find("B") != string::npos) {
+        if (legend_name.find("Capacity") != string::npos) {
             index_capacity = j;
         }
 
@@ -133,16 +133,17 @@ vector<double> test_travel_time_function(string network, travel_time_function& t
         flow.push_back(f[index_flow]);
     }
 
-    for (auto f : legend_table_flow.csv) {
+    for (vector<double> f : legend_table_flow.csv) {
         cost_solution.push_back(f[index_cost]);
     }
-
+    
+    vector<double> computed_travel_time = travel_time(flow, ttf);
     for (int i = 0; i < flow.size(); i++) {
-        travel_time_difference.push_back(flow[i] - cost_solution[i]);
+        travel_time_difference.push_back(computed_travel_time[i] - cost_solution[i]);
     }
 
     for (auto k : travel_time_difference) {
-        cout << k << endl;
+        printf("%20f\n", k);;
     }
 
     return travel_time_difference;
@@ -168,6 +169,7 @@ vector<double> travel_time(vector<double>& flow, travel_time_function& ttf) {
     vector<double> aon_capacity;
     vector<double> aon_B;
 
+
     for (auto i : ttf.table_net) {
         aon_fft.push_back(i[ttf.index_fft]);
         aon_power.push_back(i[ttf.index_power]);
@@ -177,11 +179,10 @@ vector<double> travel_time(vector<double>& flow, travel_time_function& ttf) {
 
     vector<double> aon_retval;
 
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for (int i = 0; i < flow.size(); i++) {
         aon_retval.push_back(aon_fft[i] * (1 + aon_B[i] * pow(flow[i] / aon_capacity[i], aon_power[i])));
     }
-
     return aon_retval;
 
 }
