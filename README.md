@@ -1,4 +1,4 @@
-# Traffic_network_framework
+# Traffic network framework
 This code has been written during the Fall 2018 at UC Berkeley.
 
 ## Motivation
