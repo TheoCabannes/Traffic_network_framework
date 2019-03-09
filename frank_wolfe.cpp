@@ -13,6 +13,7 @@
 #include <omp.h>
 #include "parse_csv.h"
 #include "graph.h"
+#include "dijkstra.h"
 
 using namespace std;
 
@@ -30,27 +31,27 @@ vector<double> test_travel_time_function(string, travel_time_function&, unique_p
 vector<double> travel_time(vector<double>&, travel_time_function&);
 
 int main(int argc, char** argv) { 
-    unique_ptr<graph> g;
+    unique_ptr<graph> G;
 
     string network = "data/SiouxFalls/SiouxFalls";
-    read_data(network + "_net.tntp", g);
     /// DEBUG PURPOSES
-    vector<int> keys;
-    keys.reserve(g.get()->graph.size());
-    for (auto k : g.get()->graph)
-        keys.push_back(k.first);
-    
-    for (auto i : keys) {
-        printf("Neighbours of %d:\n", i);
-        for (auto j : g.get()->graph[i]) {
-            cout << j;
-            cout << " ";
-        }
-        cout << "" << endl;
-    }
+//    vector<int> keys;
+//    keys.reserve(g.get()->graph.size());
+//    for (auto k : g.get()->graph)
+//        keys.push_back(k.first);
+//    
+//    for (auto i : keys) {
+//        printf("Neighbours of %d:\n", i);
+//        for (auto j : g.get()->graph[i]) {
+//            cout << get<0>(j);
+//            cout << " ";
+//        }
+//        cout << "" << endl;
+//    }
     /// END DEBUG
-//    auto init_tt_vals_sf = init_travel_time_function(network, g);
-  //  test_travel_time_function(network, init_tt_vals_sf, g);
+    auto init_tt_vals_sf = init_travel_time_function(network, G);
+    test_travel_time_function(network, init_tt_vals_sf, G);
+    dijkstra(1, G);
     
     cout << "" << endl;
 
@@ -64,7 +65,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-travel_time_function init_travel_time_function(string network, unique_ptr<graph>& g) {
+travel_time_function init_travel_time_function(string network, unique_ptr<graph>& G) {
 
     /* INPUTS:
      *
@@ -79,7 +80,7 @@ travel_time_function init_travel_time_function(string network, unique_ptr<graph>
 
     string file_type = "net";
     string suffix = "_" + file_type + ".tntp";
-    auto legend_table_net = read_data(network + suffix, g);
+    auto legend_table_net = read_data(network + suffix, G, file_type);
     travel_time_function ttf;
 
     int index_B, index_power, index_fft, index_capacity, j = 0;
@@ -114,7 +115,7 @@ travel_time_function init_travel_time_function(string network, unique_ptr<graph>
 
 }
 
-vector<double> test_travel_time_function(string network, travel_time_function& ttf, unique_ptr<graph>& g) {
+vector<double> test_travel_time_function(string network, travel_time_function& ttf, unique_ptr<graph>& G) {
 
     /* INPUTS:
      *
@@ -130,11 +131,19 @@ vector<double> test_travel_time_function(string network, travel_time_function& t
 
     string file_type = "flow";
     string suffix = "_" + file_type + ".tntp";
-    auto legend_table_flow = read_data(network + suffix, g);
+    auto legend_table_flow = read_data(network + suffix, G, file_type);;
 
-    int index_flow = -1, index_cost = -1, j = 0;
+    int index_flow = -1, index_cost = -1, from = -1, to = -1, j = 0;
 
     for (auto legend_name : legend_table_flow.headers) {
+        if (legend_name.find("From") != string::npos) {
+            from = j;
+        }
+
+        if (legend_name.find("To") != string::npos) {
+            to = j;
+        }
+
         if (legend_name.find("Volume") != string::npos) {
             index_flow = j;
         }
@@ -146,12 +155,15 @@ vector<double> test_travel_time_function(string network, travel_time_function& t
         ++j;
     }
 
+    // Order matters
     vector<double> flow;
+    vector<tuple<unsigned int, unsigned int>> indices_per_flow;
     vector<double> cost_solution;
     vector<double> travel_time_difference;
 
     for (auto f : legend_table_flow.csv) {
         flow.push_back(f[index_flow]);
+        indices_per_flow.push_back(make_tuple(f[from], f[to]));
     }
 
     for (vector<double> f : legend_table_flow.csv) {
@@ -161,6 +173,7 @@ vector<double> test_travel_time_function(string network, travel_time_function& t
     vector<double> computed_travel_time = travel_time(flow, ttf);
     for (int i = 0; i < flow.size(); i++) {
         travel_time_difference.push_back(computed_travel_time[i] - cost_solution[i]);
+        G.get()->graph.at((int) get<0>(indices_per_flow[i])).at((int) get<1>(indices_per_flow[i])) = computed_travel_time[i];
     }
     /*
     for (auto k : travel_time_difference) {
@@ -191,7 +204,6 @@ vector<double> travel_time(vector<double>& flow, travel_time_function& ttf) {
     vector<double> aon_capacity;
     vector<double> aon_B;
 
-
     for (auto i : ttf.table_net) {
         aon_fft.push_back(i[ttf.index_fft]);
         aon_power.push_back(i[ttf.index_power]);
@@ -205,6 +217,9 @@ vector<double> travel_time(vector<double>& flow, travel_time_function& ttf) {
     for (int i = 0; i < flow.size(); i++) {
         aon_retval.push_back(aon_fft[i] * (1 + aon_B[i] * pow(flow[i] / aon_capacity[i], aon_power[i])));
     }
+
+    cout << "Hello" << endl;
+    cout << aon_retval.size() << endl;
     return aon_retval;
 
 }
