@@ -12,7 +12,7 @@ typedef unordered_map<unsigned int, unordered_map<unsigned int, double>> graph_t
 
 using namespace std;
 
-dist_mat* dijkstra(int origin, unique_ptr<graph>& G) {
+unique_ptr<dist_mat> dijkstra(int origin, unique_ptr<graph>& G) {
     // hard coded -1, fix later
     auto graph = G.get()->graph;
     priority_queue<dist_mat, vector<dist_mat>, greater<dist_mat>> pq;
@@ -31,24 +31,22 @@ dist_mat* dijkstra(int origin, unique_ptr<graph>& G) {
             int v = (int) neighbour.first;
             double weight = graph.at(u).at(v);
             if (dist[v - 1] > dist[u - 1] + weight) {
-                cout << "Hi" << endl;
                 dist[v - 1] = dist[u - 1] + weight;
                 pq.push(make_pair(dist[v - 1], v));
             }
         }
     }
 
-    dist_mat* distances = (dist_mat*) malloc(sizeof(dist_mat) * dist.size());
-    dist_mat* j = distances;
+    unique_ptr<dist_mat> distances((dist_mat*) malloc(sizeof(dist_mat) * dist.size()));
     cout << "Hi" << endl;
     for (int i = 0; i < dist.size(); i++) {
-        *j++ = make_pair(dist[i], i + 1); 
+        *(distances.get() + i) = make_pair(dist[i], i + 1); 
     }
     
     for (int i = 0; i < dist.size(); i++) {
-        cout << (distances + i)->second;
+        cout << (distances.get() + i)->second;
         cout << " " << endl;
-        cout << (distances + i)->first << endl;
+        cout << (distances.get() + i)->first << endl;
     }
 
     return distances;

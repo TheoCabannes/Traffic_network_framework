@@ -10,12 +10,9 @@
 #include <memory>
 #include <tuple>
 #include <stdlib.h>
-#include <omp.h>
 #include "parse_csv.h"
 #include "graph.h"
 #include "dijkstra.h"
-
-using namespace std;
 
 struct travel_time_function {
     vector<vector<double>> table_net;
@@ -31,6 +28,8 @@ vector<double> test_travel_time_function(string, travel_time_function&, unique_p
 vector<double> travel_time(vector<double>&, travel_time_function&);
 
 int main(int argc, char** argv) { 
+    using std::vector;
+    using std::string;
     unique_ptr<graph> G;
 
     string network = "data/SiouxFalls/SiouxFalls";
@@ -51,7 +50,8 @@ int main(int argc, char** argv) {
     /// END DEBUG
     auto init_tt_vals_sf = init_travel_time_function(network, G);
     test_travel_time_function(network, init_tt_vals_sf, G);
-    dijkstra(1, G);
+    for (int i = 1; i < 20; i++) 
+    dijkstra(i, G);
     
     cout << "" << endl;
 

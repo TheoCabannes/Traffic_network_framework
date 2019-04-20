@@ -11,7 +11,7 @@ using namespace std;
 
 typedef pair<double, unsigned int> dist_mat;
 
-dist_mat* dijkstra(int origin, unique_ptr<graph>& G);
+unique_ptr<dist_mat> dijkstra(int origin, unique_ptr<graph>& G);
 
 #endif
 
