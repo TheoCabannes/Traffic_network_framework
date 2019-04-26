@@ -6,13 +6,11 @@
 #include "parse_csv.h"
 #include "graph.h"
 
-using namespace std;
-
 struct header_and_csv {
-    vector<string> headers;
-    vector<vector<double>> csv;
+    std::vector<std::string> headers;
+    std::vector<std::vector<double>> csv;
 };
 
-header_and_csv read_data(string file, unique_ptr<graph>& g, string suffix);
+header_and_csv read_data(std::string file, std::unique_ptr<graph>& g, std::string suffix);
 
 #endif

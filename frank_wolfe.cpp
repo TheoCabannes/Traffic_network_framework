@@ -15,7 +15,7 @@
 #include "dijkstra.h"
 
 struct travel_time_function {
-    vector<vector<double>> table_net;
+    std::vector<std::vector<double>> table_net;
     int index_fft;
     int index_B;
     int index_capacity; 
@@ -23,16 +23,23 @@ struct travel_time_function {
 };
 
 //header_and_csv read_data(string, unique_ptr<graph>&);
-travel_time_function init_travel_time_function(string, unique_ptr<graph>&);
-vector<double> test_travel_time_function(string, travel_time_function&, unique_ptr<graph>&);
-vector<double> travel_time(vector<double>&, travel_time_function&);
+travel_time_function init_travel_time_function(std::string, std::unique_ptr<graph>&);
+std::vector<double> test_travel_time_function(std::string, travel_time_function&, std::unique_ptr<graph>&);
+std::vector<double> travel_time(std::vector<double>&, travel_time_function&);
+
+using std::cout;
+using std::endl;
+using std::begin;
+using std::end;
 
 int main(int argc, char** argv) { 
     using std::vector;
     using std::string;
+    using std::unique_ptr;
+    using std::exception;
+    
     unique_ptr<graph> G;
 
-    string network = "data/SiouxFalls/SiouxFalls";
     /// DEBUG PURPOSES
 //    vector<int> keys;
 //    keys.reserve(g.get()->graph.size());
@@ -48,12 +55,21 @@ int main(int argc, char** argv) {
 //        cout << "" << endl;
 //    }
     /// END DEBUG
-    auto init_tt_vals_sf = init_travel_time_function(network, G);
-    test_travel_time_function(network, init_tt_vals_sf, G);
-    for (int i = 1; i < 20; i++) 
-    dijkstra(i, G);
-    
-    cout << "" << endl;
+    try {
+        cout << "Hi1" << endl;
+        string network = "data/SiouxFalls/SiouxFalls";
+        auto init_tt_vals_sf = init_travel_time_function(network, G);
+        cout << "Hi2" << endl;
+        test_travel_time_function(network, init_tt_vals_sf, G);
+        cout << "Hi3" << endl;
+        for (int i = 1; i < 20; i++) 
+            dijkstra(i, G);
+        
+        cout << "" << endl;
+    } catch (exception x) {
+        perror("File does not exist\n");
+        throw x;
+    }
 
    /* 
     network = "data/Anaheim/Anaheim";
@@ -65,7 +81,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-travel_time_function init_travel_time_function(string network, unique_ptr<graph>& G) {
+travel_time_function init_travel_time_function(std::string network, std::unique_ptr<graph>& G) {
 
     /* INPUTS:
      *
@@ -78,10 +94,16 @@ travel_time_function init_travel_time_function(string network, unique_ptr<graph>
      *
      */
 
+    using std::vector;
+    using std::string;
+    using std::unique_ptr;
+
     string file_type = "net";
     string suffix = "_" + file_type + ".tntp";
+    cout << "Hi4" << endl;
     auto legend_table_net = read_data(network + suffix, G, file_type);
     travel_time_function ttf;
+    cout << "Hi5" << endl;
 
     int index_B, index_power, index_fft, index_capacity, j = 0;
 
@@ -115,7 +137,7 @@ travel_time_function init_travel_time_function(string network, unique_ptr<graph>
 
 }
 
-vector<double> test_travel_time_function(string network, travel_time_function& ttf, unique_ptr<graph>& G) {
+std::vector<double> test_travel_time_function(std::string network, travel_time_function& ttf, std::unique_ptr<graph>& G) {
 
     /* INPUTS:
      *
@@ -128,6 +150,10 @@ vector<double> test_travel_time_function(string network, travel_time_function& t
      * cost_solutions for each link.
      *
      */
+
+    using std::vector;
+    using std::string;
+    using std::unique_ptr;
 
     string file_type = "flow";
     string suffix = "_" + file_type + ".tntp";
@@ -157,13 +183,13 @@ vector<double> test_travel_time_function(string network, travel_time_function& t
 
     // Order matters
     vector<double> flow;
-    vector<tuple<unsigned int, unsigned int>> indices_per_flow;
+    vector<std::tuple<unsigned int, unsigned int>> indices_per_flow;
     vector<double> cost_solution;
     vector<double> travel_time_difference;
 
     for (auto f : legend_table_flow.csv) {
         flow.push_back(f[index_flow]);
-        indices_per_flow.push_back(make_tuple(f[from], f[to]));
+        indices_per_flow.push_back(std::make_tuple(f[from], f[to]));
     }
 
     for (vector<double> f : legend_table_flow.csv) {
@@ -173,7 +199,7 @@ vector<double> test_travel_time_function(string network, travel_time_function& t
     vector<double> computed_travel_time = travel_time(flow, ttf);
     for (int i = 0; i < flow.size(); i++) {
         travel_time_difference.push_back(computed_travel_time[i] - cost_solution[i]);
-        G.get()->graph.at((int) get<0>(indices_per_flow[i])).at((int) get<1>(indices_per_flow[i])) = computed_travel_time[i];
+        G.get()->graph.at((int) std::get<0>(indices_per_flow[i])).at((int) std::get<1>(indices_per_flow[i])) = computed_travel_time[i];
     }
     /*
     for (auto k : travel_time_difference) {
@@ -184,7 +210,7 @@ vector<double> test_travel_time_function(string network, travel_time_function& t
     return travel_time_difference;
 }
 
-vector<double> travel_time(vector<double>& flow, travel_time_function& ttf) {
+std::vector<double> travel_time(std::vector<double>& flow, travel_time_function& ttf) {
 
     /* INPUTS:
      *
@@ -198,6 +224,10 @@ vector<double> travel_time(vector<double>& flow, travel_time_function& ttf) {
      * for each link.
      *
      */
+
+    using std::vector;
+    using std::string;
+    using std::unique_ptr;
 
     vector<double> aon_fft;
     vector<double> aon_power;

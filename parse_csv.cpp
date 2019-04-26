@@ -11,9 +11,10 @@
 #include "parse_csv.h"
 #include "graph.h"
 
-using namespace std;
+using std::begin;
+using std::end;
 
-header_and_csv read_data(string file, unique_ptr<graph>& G, string suffix) {
+header_and_csv read_data(std::string file, std::unique_ptr<graph>& G, std::string suffix) {
 
     /* INPUTS:
      *
@@ -25,6 +26,15 @@ header_and_csv read_data(string file, unique_ptr<graph>& G, string suffix) {
      * and the csv as vector<vector<double>>.
      *
      */
+    using std::ifstream;
+    using std::vector;
+    using std::unordered_set;
+    using std::string;
+    using std::unique_ptr;
+    using std::unordered_map;
+    using std::getline;
+    using std::find;
+    using std::stringstream;
 
     ifstream data(file);
     string line;
@@ -37,7 +47,8 @@ header_and_csv read_data(string file, unique_ptr<graph>& G, string suffix) {
         getline(data, line);
     } while (line.find('<') == 0 
             || line.find(' ') == 0 
-            || line.empty());
+            || line.empty()
+            || data.fail());
 
     vector<string> titles;
     stringstream titleStream(line);
@@ -133,20 +144,20 @@ header_and_csv read_data(string file, unique_ptr<graph>& G, string suffix) {
             perror("To node not found");
         }
 
-//        for (int i = 0; i < titles.size(); i++) {
-//            if ((titles[i].find("~") != string::npos)
-//                    || (titles[i].find(";") != string::npos) 
-//                    || (titles[i].find(":") != string::npos)) {
-//                delete_indices.insert(i);
-//            }
-//        }
-//
-//        for (int i = titles.size() - 1; i >= 0; --i) {
-//            if (find(delete_indices.begin(), delete_indices.end(), i) 
-//                    != delete_indices.end()) {
-//                titles.erase(titles.begin() + i);
-//            }
-//        }
+        for (int i = 0; i < titles.size(); i++) {
+            if ((titles[i].find("~") != string::npos)
+                    || (titles[i].find(";") != string::npos) 
+                    || (titles[i].find(":") != string::npos)) {
+                delete_indices.insert(i);
+            }
+        }
+
+        for (int i = titles.size() - 1; i >= 0; --i) {
+            if (find(delete_indices.begin(), delete_indices.end(), i) 
+                    != delete_indices.end()) {
+                titles.erase(titles.begin() + i);
+            }
+        }
 
         while (getline(data, line)) {
             stringstream lineStream(line);

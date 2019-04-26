@@ -7,11 +7,9 @@
 #include "parse_csv.h"
 #include "graph.h"
 
-using namespace std;
+typedef std::pair<double, unsigned int> dist_mat;
 
-typedef pair<double, unsigned int> dist_mat;
-
-unique_ptr<dist_mat> dijkstra(int origin, unique_ptr<graph>& G);
+std::unique_ptr<dist_mat> dijkstra(int origin, std::unique_ptr<graph>& G);
 
 #endif
 
