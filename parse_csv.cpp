@@ -35,6 +35,7 @@ header_and_csv read_data(std::string file, std::unique_ptr<graph>& G, std::strin
     using std::getline;
     using std::find;
     using std::stringstream;
+    using std::exception;
 
     ifstream data(file);
     string line;
@@ -49,6 +50,10 @@ header_and_csv read_data(std::string file, std::unique_ptr<graph>& G, std::strin
             || line.find(' ') == 0 
             || line.empty()
             || data.fail());
+
+    if (data.fail()) {
+        throw "Filename does not exist";    
+    }
 
     vector<string> titles;
     stringstream titleStream(line);
