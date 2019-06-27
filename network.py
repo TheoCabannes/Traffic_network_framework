@@ -1,6 +1,8 @@
 #test
 import numpy as np
 import pandas as pd
+from scipy import sparse
+import matplotlib.pyplot as plt
 
 def read_metadata(file):
     """
