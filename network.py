@@ -153,3 +153,26 @@ def read_demand(network):
     del d
     # print(demand)
     return demand.todok()
+
+def get_graph(graph_wrapped):
+    """
+    Parameter:
+        graph_wrapped: should be = (table_net, index_fft, index_B, index_capacity, index_power, index_init, index_term)
+    Return:
+        A dictionary encoding the graph: graph[origin][destination] = link_id
+    """
+    table_net, index_fft, index_B, index_capacity, index_power, index_init, index_term = graph_wrapped
+    
+    graph = {}
+    for i in range(table_net.shape[0]):
+        link_index = i
+        node_init = int(table_net[i][index_init])
+        node_term = int(table_net[i][index_term])
+        
+        if node_init not in graph:
+            graph[node_init] = {}
+        # if node_term not in graph[node_init]:
+        #     graph[node_init][node_term] = {}
+        # we assume that there is only one possible directed link between two nodes
+        graph[node_init][node_term] = link_index
+    return graph
