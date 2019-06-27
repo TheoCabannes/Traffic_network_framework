@@ -82,9 +82,9 @@ def init_travel_time_function(network):
             index_fft = j
         if "Capacity" in legend_name:
             index_capacity = j
-        if "Init" in legend_name:
+        if ("Init" in legend_name) or ("Tail" in legend_name):
             index_init = j
-        if "Term" in legend_name:
+        if ("Term" in legend_name) or ("Head" in legend_name):
             index_term = j
         j += 1
     graph_wrapped = table_net, index_fft, index_B, index_capacity, index_power, index_init, index_term
