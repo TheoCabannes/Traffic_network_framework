@@ -134,12 +134,21 @@ def read_demand(network):
     assert 'Origin' in line
     data = {}
     # print(line, end="")
-    origin = int(line.split('\t')[1])
+    print(line)
+    origin = None
+    try:
+        origin = int(line.split('\t')[1])
+    except:
+        origin = int(line.split(' ')[1])
     data[origin] = {}
     for line in inputfile:
         # print(line, end="")
         if 'Origin ' in line:
-            origin = int(line.split('\t')[1])
+            origin = None
+            try:
+                origin = int(line.split('\t')[1])
+            except:
+                origin = int(line.split(' ')[1])
             data[origin] = {}
         # else read the destination
         else:
