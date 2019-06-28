@@ -178,3 +178,49 @@ def get_graph(graph_wrapped):
         # we assume that there is only one possible directed link between two nodes
         graph[node_init][node_term] = link_index
     return graph
+
+def neighbours(node, adj):
+    """
+    Parameter:
+        node: node for which to find neigbours for
+        adj: adjacency matrix that describes network
+    Return:
+        List of nodes that are neighbours to node
+    """
+    return np.nonzero(adj[node])[0].tolist()
+
+def add_flow_dijkstra(adj, src, target, faon, flow, g):
+    """
+    Parameter:
+        adj: adjacency matrix that describes network
+        src: starting node for OD pair
+        target: end node for OD pair
+        faon: current all or nothing flow allocation that the algorithm is building
+        flow: demand of the current of OD pair
+        g: graph dictionary, g[node_init] = {node_term_1: link_from_init_to_term_1, node_term_2: link_from_init_to_term_2}
+    Return:
+        Returns all or nothing flow allocation, where flow is allocated by shortest path for OD pair (as determined by Dijkstra's algorithm)
+    """
+    q = [i for i in range(len(adj))] # queue of nodes
+    dist = [np.inf for i in range(len(adj))] # node distances
+    prev = [None for i in range(len(adj))] # predecessor in shortest path
+    
+    dist[src] = 0 # set source node's distance to itself as zero
+    
+    while len(q) != 0:
+        u = min(q, key=lambda n:dist[n])
+        q.remove(u)
+        
+        if u == target: # when target is reach, use predecessors to allocate all or nothing flow to links in shortest path
+            while u != src:
+                prev_node = prev[u]
+                curr_link = g[prev_node+1][u+1]
+                faon[curr_link] += flow
+                u = prev_node
+            return faon
+        
+        for v in neighbours(u, adj):
+            alt = dist[u] + adj[u][v]
+            if alt < dist[v]:
+                dist[v] = alt
+                prev[v] = u
