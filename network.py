@@ -1,4 +1,3 @@
-#test
 import numpy as np
 import pandas as pd
 from scipy import sparse
@@ -134,7 +133,6 @@ def read_demand(network):
     assert 'Origin' in line
     data = {}
     # print(line, end="")
-    print(line)
     origin = None
     try:
         origin = int(line.split('\t')[1])
@@ -188,7 +186,7 @@ def get_graph(graph_wrapped):
         graph[node_init][node_term] = link_index
     return graph
 
-def neighbours(node, adj):
+def neighbours(node, g):
     """
     Parameter:
         node: node for which to find neigbours for
@@ -196,9 +194,9 @@ def neighbours(node, adj):
     Return:
         List of nodes that are neighbours to node
     """
-    return np.nonzero(adj[node])[0].tolist()
+    return [k-1 for k in list(g[node+1].keys())]
 
-def add_flow_dijkstra(adj, src, target, faon, flow, g):
+def add_flow_dijkstra(src, target, faon, flow, g, tt):
     """
     Parameter:
         adj: adjacency matrix that describes network
@@ -210,9 +208,9 @@ def add_flow_dijkstra(adj, src, target, faon, flow, g):
     Return:
         Returns all or nothing flow allocation, where flow is allocated by shortest path for OD pair (as determined by Dijkstra's algorithm)
     """
-    q = [i for i in range(len(adj))] # queue of nodes
-    dist = [np.inf for i in range(len(adj))] # node distances
-    prev = [None for i in range(len(adj))] # predecessor in shortest path
+    q = [i for i in range(len(g))] # queue of nodes
+    dist = [np.inf for i in range(len(g))] # node distances
+    prev = [None for i in range(len(g))] # predecessor in shortest path
     
     dist[src] = 0 # set source node's distance to itself as zero
     
@@ -228,8 +226,72 @@ def add_flow_dijkstra(adj, src, target, faon, flow, g):
                 u = prev_node
             return faon
         
-        for v in neighbours(u, adj):
-            alt = dist[u] + adj[u][v]
+        for v in neighbours(u, g):
+            alt = dist[u] + tt[g[u+1][v+1]]
             if alt < dist[v]:
                 dist[v] = alt
                 prev[v] = u
+
+# all or nothing function
+def all_or_nothing(d, tt, g):
+    """
+    Parameter:
+        d: a demand as sparse matrix, d[origin][dest] = demand between origin and dest
+        tt: travel time on every links, tt[l] = travel time of the link l
+        g: graph dictionary, g[node_init] = {node_term_1: link_from_init_to_term_1, node_term_2: link_from_init_to_term_2}
+    Return:
+        The all or nothing flow allocation corresponding to the demand d and the travel time tt.
+    """
+    nb_links = tt.shape
+    faon = np.zeros(nb_links)
+
+    for o_tmp, d_tmp in d.keys():
+        #sp = find_sp(o_tmp, d_tmp)
+        #faon = add_flow(faon, sp, d[o_tmp, d_tmp])
+#         faon = add_flow_dijkstra(o_tmp, d_tmp, faon, d[o_tmp, d_tmp], g, tt) # TO DO: Pass g and tt instead of adj
+        faon = add_flow_dijkstra(o_tmp, d_tmp, faon, d[o_tmp, d_tmp], g, tt)
+        # flow_tmp = d[o_tmp, d_tmp]
+        # faon = put_on_shortest_path(faon, o_tmp, d_tmp, flow_tmp, tt, g, G) # to change when we write our own 
+    return faon
+
+#def find_sp(g):
+
+def potential(f, graph_wrapped):
+    """
+    Parameter:
+        flow: a vector that represents the flow of every links
+        graph_wrapped: should be = (table_net, index_fft, index_B, index_capacity, index_power, index_init, index_term)
+    Return:
+        The potential function tha t we want to minimize.
+
+        The potential function is (one row of the table) is sum(int(t_e(s), s in [0, f_e]), e) = sum(t0 * (f + B*(f/capacity)**(power+1)/power)).    
+        This function is useful for doing a line search, it computes the potential at flow assignment f.
+    """
+    table_net, index_fft, index_B, index_capacity, index_power, index_init, index_term = graph_wrapped
+    pot_tmp = table_net[:,index_fft] * f * (1 + (table_net[:,index_B] / table_net[:,index_power])*(f/table_net[:,index_capacity])**table_net[:,index_power])
+    return np.sum(pot_tmp)
+
+def line_search(f, res=20):
+    """
+    Parameter:
+        f: the function that we want to minimize between 0 and 1
+        res: the resolution of the grid ([0, 1] is divided in 2^res points).
+    Return:
+        On a grid of 2^res points bw 0 and 1, find global minimum for a continuous convex function using bisection 
+    """
+    d = 1. / (2**res - 1) # d: Size of interval between adjacent points
+    l, r = 0, 2**res - 1 # l: first point, r: last point
+    while r - l > 1:
+        if f(l * d) <= f(l * d + d): # Interval l: [l*d, l*d + d]
+            return l * d
+        if f(r * d - d) >= f(r * d):
+            return r * d
+        # otherwise f(l) > f(l+d) and f(r-d) < f(r)
+        m1, m2 = (l + r) / 2, 1 + (l + r) / 2
+        if f(m1 * d) < f(m2 * d):
+            r = m1
+        if f(m1 * d) > f(m2 * d):
+            l = m2
+        if f(m1 * d) == f(m2 * d):
+            return m1 * d
+    return l * d
